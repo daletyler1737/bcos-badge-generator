@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BCOS Badge Generator</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0f;
+            color: #00ff41;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 {
+            text-align: center;
+            color: #00ff41;
+            text-shadow: 0 0 10px #00ff41;
+            margin-bottom: 2rem;
+            font-size: 1.8rem;
+        }
+        .card {
+            background: #111;
+            border: 1px solid #00ff41;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 0 15px rgba(0,255,65,0.1);
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #888;
+            font-size: 0.9rem;
+        }
+        input {
+            width: 100%;
+            padding: 0.8rem;
+            background: #0a0a0f;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #00ff41;
+            font-family: inherit;
+            font-size: 1rem;
+        }
+        input:focus {
+            outline: none;
+            border-color: #00ff41;
+            box-shadow: 0 0 5px rgba(0,255,65,0.3);
+        }
+        .style-options {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .style-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border: 1px solid #333;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .style-option:hover, .style-option.selected {
+            border-color: #00ff41;
+            background: rgba(0,255,65,0.1);
+        }
+        .style-option input { display: none; }
+        .preview {
+            text-align: center;
+            padding: 1.5rem;
+            background: #0a0a0f;
+            border-radius: 4px;
+            margin-top: 1rem;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .preview img { max-width: 100%; }
+        .output {
+            margin-top: 1rem;
+        }
+        .output-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .tab {
+            padding: 0.5rem 1rem;
+            background: #0a0a0f;
+            border: 1px solid #333;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #888;
+            font-size: 0.85rem;
+        }
+        .tab.active {
+            border-color: #00ff41;
+            color: #00ff41;
+        }
+        textarea {
+            width: 100%;
+            padding: 0.8rem;
+            background: #0a0a0f;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #00ff41;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+            min-height: 80px;
+        }
+        .btn {
+            background: #00ff41;
+            color: #0a0a0f;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            margin-top: 1rem;
+            width: 100%;
+            transition: all 0.2s;
+        }
+        .btn:hover {
+            background: #00cc33;
+            box-shadow: 0 0 15px rgba(0,255,65,0.4);
+        }
+        .btn.copied {
+            background: #ffcc00;
+        }
+        .error {
+            color: #ff4444;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>[ BCOS Badge Generator ]</h1>
+        
+        <div class="card">
+            <label>Enter your BCOS Cert ID or Repo URL:</label>
+            <input type="text" id="certInput" placeholder="e.g. bcos_abc123 or https://github.com/user/repo">
+            <div class="error" id="error"></div>
+        </div>
+        
+        <div class="card">
+            <label>Badge Style:</label>
+            <div class="style-options">
+                <label class="style-option selected">
+                    <input type="radio" name="style" value="flat" checked>
+                    flat
+                </label>
+                <label class="style-option">
+                    <input type="radio" name="style" value="flat-square">
+                    flat-square
+                </label>
+                <label class="style-option">
+                    <input type="radio" name="style" value="for-the-badge">
+                    for-the-badge
+                </label>
+                <label class="style-option">
+                    <input type="radio" name="style" value="social">
+                    social
+                </label>
+            </div>
+        </div>
+        
+        <div class="card">
+            <label>Preview:</label>
+            <div class="preview" id="preview">
+                <span style="color:#555">Enter a cert ID to see preview</span>
+            </div>
+        </div>
+        
+        <div class="card output">
+            <div class="output-tabs">
+                <button class="tab active" data-format="markdown">Markdown</button>
+                <button class="tab" data-format="html">HTML</button>
+            </div>
+            <textarea id="output" readonly placeholder="Embed code will appear here..."></textarea>
+            <button class="btn" id="copyBtn">[ Copy to Clipboard ]</button>
+        </div>
+    </div>
+    
+    <script>
+        const input = document.getElementById('certInput');
+        const preview = document.getElementById('preview');
+        const output = document.getElementById('output');
+        const copyBtn = document.getElementById('copyBtn');
+        const error = document.getElementById('error');
+        const tabs = document.querySelectorAll('.tab');
+        const styleOptions = document.querySelectorAll('.style-option');
+        let currentFormat = 'markdown';
+        let currentStyle = 'flat';
+        
+        // Badge API endpoint
+        const BADGE_API = 'https://50.28.86.131/bcos/badge/';
+        const VERIFY_BASE = 'https://rustchain.org/bcos/verify/';
+        
+        function extractCertId(input) {
+            input = input.trim();
+            // Already a cert ID
+            if (input.startsWith('bcos_') || input.startsWith('BCOS-')) {
+                return input.replace('BCOS-', 'BCOS-').toUpperCase();
+            }
+            // GitHub URL
+            const match = input.match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
+            if (match) {
+                return `BCOS-${match[1]}-${match[2]}`.toUpperCase();
+            }
+            return null;
+        }
+        
+        function generateBadge(certId, style) {
+            const encoded = encodeURIComponent(certId);
+            const badgeUrl = `${BADGE_API}${encoded}.svg?style=${style}`;
+            const verifyUrl = `${VERIFY_BASE}${encoded}`;
+            
+            return { badgeUrl, verifyUrl, certId };
+        }
+        
+        function updatePreview() {
+            const val = input.value.trim();
+            if (!val) {
+                preview.innerHTML = '<span style="color:#555">Enter a cert ID to see preview</span>';
+                output.value = '';
+                error.textContent = '';
+                return;
+            }
+            
+            const certId = extractCertId(val);
+            if (!certId) {
+                error.textContent = 'Invalid format. Use cert ID (bcos_xxx) or GitHub URL';
+                preview.innerHTML = '';
+                output.value = '';
+                return;
+            }
+            
+            error.textContent = '';
+            const { badgeUrl, verifyUrl } = generateBadge(certId, currentStyle);
+            
+            // Preview with link
+            preview.innerHTML = `<a href="${verifyUrl}" target="_blank"><img src="${badgeUrl}" alt="BCOS Badge"></a>`;
+            
+            // Generate embed codes
+            const markdown = `[![BCOS](${badgeUrl})](${verifyUrl})`;
+            const html = `<a href="${verifyUrl}" target="_blank"><img src="${badgeUrl}" alt="BCOS Badge"></a>`;
+            
+            output.value = currentFormat === 'markdown' ? markdown : html;
+        }
+        
+        // Event listeners
+        input.addEventListener('input', updatePreview);
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentFormat = tab.dataset.format;
+                updatePreview();
+            });
+        });
+        
+        styleOptions.forEach(opt => {
+            opt.addEventListener('click', () => {
+                styleOptions.forEach(o => o.classList.remove('selected'));
+                opt.classList.add('selected');
+                currentStyle = opt.querySelector('input').value;
+                updatePreview();
+            });
+        });
+        
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(output.value).then(() => {
+                copyBtn.textContent = '[ Copied! ]';
+                copyBtn.classList.add('copied');
+                setTimeout(() => {
+                    copyBtn.textContent = '[ Copy to Clipboard ]';
+                    copyBtn.classList.remove('copied');
+                }, 2000);
+            });
+        });
+    </script>
+</body>
+</html>
